@@ -1,3 +1,12 @@
 #zipStatus {
     color: red;
 }
+
+#weather-apis {
+    display: flex;
+}
+
+#weather-apis > form {
+    flex: 50%;
+    border: 1px solid lightgray;
+}

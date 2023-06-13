@@ -34,7 +34,7 @@ $("#zip").on("keyup", function () {
           success: function (response) {
             console.log(response);
             $("#wind_speed").text(response.current.wind_speed);
-            $("#wind_direction").text(response.current.wind_speed);
+            $("#wind_direction").text(response.current.wind_deg);
             $("#main_temp").text(response.current.temp);
             $("#weather_conditions").text(
               response.daily[0].summary +
