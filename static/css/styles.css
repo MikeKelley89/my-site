@@ -1,16 +1,105 @@
 body {
-    padding: 16px;
+  width: 40%;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 #zipStatus {
-    color: red;
+  color: red;
+  display: none;
 }
 
-#weather-apis {
-    display: flex;
+#weatherForm {
+  border: 1px solid lightgray;
+  padding: 16px;
+  display: inline-block;
 }
 
-#weather-apis > form {
-    flex: 50%;
-    border: 1px solid lightgray;
+#weatherForm p {
+  margin-top: 0.5rem;
+  margin-bottom: 0;
+  color: cornflowerblue;
+}
+#weatherForm #conditions {
+  font-size: 1.5em;
+  color: darkorange;
+  font-weight: normal;
+}
+
+.results {
+  display: none;
+  font-weight: 600;
+}
+
+.results span {
+  color: black;
+  font-weight: normal;
+}
+
+.codeHints {
+  font-style: italic;
+  color: darkgray;
+}
+
+ol li ol {
+  list-style-type: lower-latin;
+}
+
+li p:last-of-type {
+  margin-bottom: 0;
+}
+
+[class^="notification"] {
+  margin: 16px;
+  position: relative;
+  padding: 2px 16px;
+  border-radius: 8px;
+  border: 1px solid;
+}
+
+[class^="notification"] p {
+  padding-left: 24px;
+  margin: 8px 0;
+}
+
+[class^="notification"] > .fa-solid {
+  position: absolute;
+  top: 12px;
+  line-height: 24px;
+}
+
+.notificationNote {
+  background-color: #d5eef8;
+  color: #2183a5;
+}
+
+.notificationTip {
+  background-color: #ddefd7;
+  color: #308935;
+}
+
+.notificationExample {
+  background-color: #dddddd;
+  color: #2b3139;
+}
+
+.notificationWarning {
+  background-color: #f2dedb;
+  color: #992222;
+}
+
+#apiError, #alert {
+  display: none;
+}
+
+#apiError p, #alert p {
+  color: #992222;
+}
+
+.alerts {
+  font-weight: 600;
+}
+
+.alerts span {
+  font-weight: normal;
 }

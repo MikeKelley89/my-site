@@ -13,39 +13,450 @@
       crossorigin="anonymous"
     />
     <link rel="stylesheet" href="../static/css/styles.css" />
-    <script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/line-numbers/prism-line-numbers.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/toolbar/prism-toolbar.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/line-highlight/prism-line-highlight.min.css"
+    />
+
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
   </head>
 
-  <body>
+  <body class="line-numbers">
     <h1>OpenWeather API demo</h1>
-    <form id="localWeather">
-      <div>
-        <label for="zip">Enter your 5-digit zip code:</label>
-        <input id="zip" type="text" name="text" />
-        <span id="zipStatus"></span>
+    <div id="weatherForm">
+      <form id="localWeather">
+        <div>
+          <label for="zip">Enter a 5-digit US ZIP code:</label>
+          <input id="zip" type="text" name="text" />
+          <span id="zipStatus"
+            >This is not a valid ZIP format (for this API)</span
+          >
+        </div>
+        <div>
+          <button
+            id="findWeather"
+            type="button"
+            onclick="getWeather()"
+            class="btn btn-primary btn-sm weatherbutton"
+            required
+            disabled="disabled"
+          >
+            Check weather conditions
+          </button>
+        </div>
+      </form>
+      <div class="notificationWarning" id="apiError">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <p>Something went wrong :(</p>
+        <p>Here's what I got back:</p>
+        <p><span id="errorCode"></span><span id="errorMsg"></span></p>
       </div>
-      <div>
-        <button
-          id="findWeather"
-          type="button"
-          onclick="getWeather()"
-          class="btn btn-primary weatherbutton"
-          required
-          disabled="disabled"
-        >
-          Check weather conditions
-        </button>
+      <div class="notificationWarning" id="alert">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <p>There's a weather alert in this area! Stay safe out there!</p>
+        <p class="alerts">Alert source: <span id="sender_name"></span></p>
+        <p class="alerts">Event: <span id="event"></span></p>
+        <p class="alerts">Start time: <span id="start"></span></p>
+        <p class="alerts">End time: <span id="end"></span></p>
+        <p class="alerts">Description: <span id="description"></span></p>
+        <p class="alerts">Type: <span id="tags"></span></p>
       </div>
-    </form>
+      <p class="results" id="conditions"></p>
+      <p class="results">
+        <i class="fa-solid fa-temperature-half"></i> Temperature:
+        <span id="main_temp"></span> <span>F</span>
+      </p>
+      <p class="results">
+        <i class="fa-solid fa-wind"></i> Wind speed:
+        <span id="wind_speed"></span> <span>MPH</span>
+      </p>
+      <p class="results">
+        <i class="fa-solid fa-compass"></i> Wind direction:
+        <span id="wind_direction"></span> <span>degrees</span>
+      </p>
+      <p class="results">
+        <i class="fa-solid fa-calendar-day"></i> Today:
+        <span id="weather_conditions"></span>
+      </p>
+    </div>
+    <div id="howItWorks">
+      <h2>What's going on?</h2>
+      <p>
+        Before explaining the code, it's important to have a high-level overview
+        of exactly what's happening. We're actually using two APIs from
+        <a href="https://openweathermap.org/">OpenWeatherMap.org</a>:
+      </p>
+      <ul>
+        <li>
+          <a href="https://openweathermap.org/api/geocoding-api"
+            >Geocoding API</a
+          >
+          - Translates either a location name (city, county, country), or a ZIP
+          code to latitude and longitude.
+        </li>
+        <li>
+          <a href="https://openweathermap.org/api/one-call-3"
+            >One Call API 3.0</a
+          >
+          - Returns the weather data we're looking for of a specific location.
+          Unfortunately, it <em>requires</em> that the location input be
+          latitude and longitude. I feel most people don't know the
+          <code>&lt;lat&gt;</code> and <code>&lt;lon&gt;</code> for their
+          location offhand (I know I don't).
+        </li>
+      </ul>
+      <p>
+        In this demo, I felt it was easier to ask users for a ZIP code, rather
+        than having them type a city, county, and country location. By taking a
+        ZIP code input by a user, I can first call the Geocoding API to return
+        the latitude and longitude of that ZIP, and pass those to the One Call
+        API 3.0 to return the weather information for that location.
+      </p>
+      <div class="notificationNote">
+        <i class="fa-solid fa-circle-info"></i>
+        <p>
+          For US ZIP codes, the Geocoding API supports <em>only</em> 5-digit
+          codes, and not the ZIP+4 format. I specifically chose to limit the ZIP
+          validator and API call to US ZIP codes.
+        </p>
+      </div>
+      <h2>How it works</h2>
+      <p>
+        I use the jQuery language library to make writing and reading the code a
+        bit easier. The overall workflow is:
+      </p>
+      <ol>
+        <li>
+          <p>
+            Disable the default behavior of pressing <code>[Enter]</code> in the
+            form field <span class="codeHints">(line 2)</span>.
+          </p>
+          <p>
+            When it's detected that the form is submitted (by pressing
+            <code>[Enter]</code> or clicking the button), call the
+            <code>getWeather();</code> function, which is where I do the API
+            calls <span class="codeHints">(line 3)</span>.
+          </p>
+          <pre><code class="language-js">
+            $("#localWeather").submit(function (event) {
+              event.preventDefault();
+              getWeather();
+            });
+          </code></pre>
+        </li>
+        <li>
+          Whenever a user presses and lets go of a keyboard key while the focus
+          is in the ZIP code input box <span class="codeHints">(line 1)</span>,
+          validate the current value of the ZIP code field against a regular
+          expression <span class="codeHints">(lines 2-3)</span>.
+          <ol>
+            <li>
+              If the current ZIP matches the regex
+              <span class="codeHints">(line 4)</span>, hide the "Invalid ZIP"
+              message <span class="codeHints">(line 5)</span> and enable the
+              submit button <span class="codeHints">(line 6)</span>.
+            </li>
+            <li>
+              If the current ZIP doesn't match the regex
+              <span class="codeHints">(line 7)</span>, show an error message
+              <span class="codeHints">(line 8)</span>, disable the submit button
+              <span class="codeHints">(line 9)</span>, and hide any previous
+              results <span class="codeHints">(line 10)</span>.
+            </li>
+          </ol>
+          <pre><code class="language-js">
+            $("#zip").on("keyup", function () {
+              var zipValidate = new RegExp(/(^\d{5})$/);
+              var isValid = this.value.match(zipValidate);
+              if (isValid) {
+                $("#zipStatus").hide();
+                $("#findWeather").removeAttr("disabled", true);
+              } else {
+                $("#zipStatus").show();
+                $("#findWeather").attr("disabled", true);
+                $(".results").hide();
+              }
+            });
+          </code></pre>
+        </li>
+        <li>
+          <p>
+            Once the ZIP is a valid pattern and the user presses
+            <code>[Enter]</code> or clicks the button, build a request with the
+            user-provided ZIP and submit a call to the Geocoding API
+            <span class="codeHints">(lines 2-6)</span>. The Geocoding API
+            translates the US ZIP code to latitude and longitude coordinates.
+          </p>
+          <p>If the API call returns an error:</p>
+          <ol>
+            <li>
+              Record the response to the console
+              <span class="codeHints">(line 8)</span>.
+            </li>
+            <li>
+              Show the API error callout
+              <span class="codeHints">(line 9)</span>.
+            </li>
+            <li>
+              Fill the API error callout with the details of the error
+              <span class="codeHints">(lines 10-11)</span>.
+            </li>
+            <li>Exit the function <span class="codeHints">(line 12)</span>.</li>
+          </ol>
+          <pre><code class="language-js">
+            function getWeather() {
+              $.ajax({
+                url:
+                  "https://api.openweathermap.org/geo/1.0/zip?zip=" +
+                  document.getElementById("zip").value +
+                  "&appid=48ced08bac40a7979644285e22addce1",
+                error: function (response) {
+                  console.log(response);
+                  $("#apiError").show();
+                  $("#errorCode").text(response.status + ": ");
+                  $("#errorMsg").text(response.statusText);
+                  return false;
+                },
+          </code></pre>
+        </li>
+        <li>
+          If the Geocoding API call succeeds, record the response to the console
+          <span class="codeHints">(line 2)</span>, and show the
+          <code>.results</code> paragraphs below the button
+          <span class="codeHints">(line 3)</span>. Additionally, show the
+          <code>#conditions</code> section, and display the name of the location
+          returned from the API <span class="codeHints">(line 4)</span>.
+          <pre><code class="language-js">
+            success: function (response) {
+              console.log(response);
+              $(".results").show();
+              $("#conditions").text("Conditions for " + response.name + "...");</code></pre>
+        </li>
+        <li>
+          Take the
+          <code>&lt;lat&gt;</code> and <code>&lt;lon&gt;</code> results from the
+          Geocoding API and build a request to return weather data for that
+          location.
+          <pre><code class="language-js">
+              $.ajax({
+                url:
+                  "https://api.openweathermap.org/data/3.0/onecall?lat=" +
+                  response.lat +
+                  "&lon=" +
+                  response.lon +
+                  "&exclude=minutely,hourly&appid=48ced08bac40a7979644285e22addce1&units=imperial",
+          </code></pre>
+        </li>
+        <li>
+          Show the results fields and dynamically insert the values returned
+          from the weather API.
+          <pre><code class="language-js">
+            success: function (response) {
+              console.log(response);
+    
+              $("#wind_speed").text(response.current.wind_speed);
+              $("#wind_direction").text(response.current.wind_deg);
+              $("#main_temp").text(response.current.temp);
+              $("#weather_conditions").text(
+                response.daily[0].summary +
+                  ". Currently it looks like there's " +
+                  response.current.weather[0].description +
+                  "."
+              );
+          </code></pre>
+        </li>
+        <li>
+          <p>
+            If there's a weather alert for the specified location, show the
+            alert box and populate with the alert details returned from the API.
+          </p>
+          <p>
+            The <code>start</code> and <code>end</code> times are returned as
+            Unix UTC time, so convert them to a more human readable format
+            <span class="codeHints">(lines 5-8)</span>.
+          </p>
 
-    <h2>Conditions for <span id="location"></span></h2>
-    <span><b>Temperature: </b></span><span id="main_temp"></span
-    ><span id="main_temp_unit"></span><br />
-    <span><b>Wind speed: </b></span><span id="wind_speed"></span>
-    <span id="wind_speed_unit"></span><br />
-    <span><b>Wind direction: </b></span><span id="wind_direction"></span
-    ><span id="wind_degree_unit"></span><br />
-    <span><b>Conditions: </b></span><span id="weather_conditions"></span>
+          <pre><code class="language-js">
+            if (response.alerts) {
+              $("#alert").show();
+              $("div#alert #sender_name").text(response.alerts[0].sender_name);
+              $("div#alert #event").text(response.alerts[0].event);
+              var start = new Date(response.alerts[0].start * 1000);
+              var end = new Date(response.alerts[0].end * 1000);
+              $("div#alert #start").text(start.toLocaleTimeString("default"));
+              $("div#alert #end").text(end.toLocaleTimeString("default"));
+              $("div#alert #description").text(response.alerts[0].description);
+              $("div#alert #tags").text(response.alerts[0].tags[0]);
+            }
+          </code></pre>
+        </li>
+      </ol>
+    </div>
+    <div id="lessons">
+      <h2>Lessons learned</h2>
+      <p>
+        The most important thing I can ask you, the reader, is to realize this
+        is not an enterprise-grade product. I never intended it to be. The
+        purpose of all this is to demonstrate my technical competency, show that
+        I can make an API call and display the returned data, and then document
+        it.
+      </p>
+      <p>
+        That said, years of working as a QA software tester, doing hobbyist
+        programming, exposure to enterprise products, and my technical writing
+        acumen, I'm aware of many shortcomings in both the product and the
+        documentation. The purpose for leaving those shortcomings, when I know
+        about them, is to demonstrate that I can recognize problems, issues, or
+        shortfalls, and then vocalize them.
+      </p>
+      <h3>"Product" shortcomings, caveats</h3>
+      <p>Here's my analysis of the demo product:</p>
+      <ul>
+        <li>
+          <p>
+            I disabled the form's default behavior when pressing
+            <code>[Enter]</code> and made it so <code>[Enter]</code> submits the
+            form. I do not prevent the user from submitting the form via
+            <code>[Enter]</code>, even if the ZIP validator recognizes issues
+            with the input (such as too many numbers, too few numbers, or
+            letters).
+          </p>
+          <p>
+            I made an attempt to configure this functionality, but after 20-30
+            minutes of failure, moved on. Again, this is not intended to be
+            enterprise-grade software, but a demonstration.
+          </p>
+        </li>
+        <li>
+          The ZIP validator checks only if the input is exactly 5 digits. It
+          doesn't care if those 5 digits are an actual ZIP code or not. I could
+          leverage another API to verify the input is a legitimate US ZIP code,
+          but that goes beyond the scope of this project.
+        </li>
+        <li>
+          <p>
+            There are cases where multiple alerts could be returned by the
+            weather API, such as strong weather near a body of water. There
+            could be an alert for wind, an alert for lightning, an alert for a
+            tornado-warning, and an alert for small watercraft advisory.
+          </p>
+          <p>
+            I display only the first alert in the returned
+            <code>alerts</code> array. I could loop through the array and
+            provide details for every alert in the array, but displaying the
+            first alert was sufficient for my needs, and my time was better
+            spent polishing the page and documentation.
+          </p>
+        </li>
+        <li>
+          <p>
+            The OpenWeatherMap API doesn't support hashing of your API key for
+            some reason. In my code examples I display my access key, which
+            could be used against me. I thought about replacing the keys in the
+            examples with something like, <code>[your_access_key]</code>, but
+            the keys are still visible in the JavaScript, so that felt
+            pointless.
+          </p>
+          <p>
+            Instead, I customized my API account to limit the number of accesses
+            to be far below the level where I would have to start paying.
+          </p>
+        </li>
+      </ul>
+      <h3>Documentation</h3>
+      <p>This is my analysis of my documentation:</p>
+      <ul>
+        <li>
+          The style I wrote this page in is very informal. This works for some
+          organizations, but not for others. I can adapt my tone and style as
+          needed.
+        </li>
+        <li>
+          <p>
+            The "code line" hints within the explanations could cause
+            disorientation. A user could be reading the explanation, see the
+            code line hint, look down at the code, find the line number, read
+            the code, then have to go back up to the explanation.
+          </p>
+          <p>
+            This can cause the reader to lose their place or could feel
+            disorienting. The alternative is to put the code explanations in the
+            code example, using code comments, and reducing the amount of text
+            in the <em>How it works</em> section. The caveat to this, though, is
+            that it would balloon the size of the code examples. In the end, I
+            decided to try to keep the code examples as small as possible.
+          </p>
+          <p>
+            Another issue with this approach is when the code examples are
+            updated, the manually written code line hints could become incorrect
+            (if not carefully checked), causing frustration to the reader.
+          </p>
+        </li>
+      </ul>
+    </div>
+    <div id="acknowledgements">
+      <h2>Acknowledgements</h2>
+      <p>
+        I coded this tool and this page (including the callout styles) on my
+        own, but I still had a lot of help. These are the resources/tools I
+        used:
+      </p>
+      <ul>
+        <li>The OpenWeatherMap.org API</li>
+        <li>The HTML/CSS/JS was hand-written, by me, in Visual Studio Code</li>
+        <li>
+          Tom Johnson's
+          <a href="https://idratherbewriting.com/">I'd Rather Be Writing</a>
+          blog
+        </li>
+        <li>StackOverflow</li>
+        <li>Bootstrap</li>
+        <li>jQuery</li>
+        <li>
+          <a href="https://prismjs.com/">Prism.js</a> (for the syntax
+          highlighting)
+        </li>
+        <li><a href="https://fontawesome.com/">FontAwesome</a></li>
+        <li>Git/GitHub/GitHub Pages</li>
+      </ul>
+    </div>
+    <div>
+      <h2>About me</h2>
+      <p>
+        I'm a nearly 20-year technical writer, living in Salt Lake City, with my
+        original background being in tools programming. My contact details are:
+      </p>
+      <ul>
+        <li><a href="https://www.linkedin.com/in/mike-kelley/">LinkedIn</a></li>
+        <li>mikekelley89 (at) gmail</li>
+      </ul>
+    </div>
     <script src="../static/js/OpenWeather.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/line-highlight/prism-line-highlight.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/toolbar/prism-toolbar.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/copy-to-clipboard/prism-copy-to-clipboard.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/normalize-whitespace/prism-normalize-whitespace.min.js"></script>
   </body>
 </html>
